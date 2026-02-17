@@ -62,12 +62,13 @@ Go to **http://localhost** in your browser.
 
 ## Useful URLs
 
-| Service         | URL                        |
-|-----------------|----------------------------|
-| App             | http://localhost            |
-| API docs        | http://localhost:8000/docs  |
-| MinIO Console   | http://localhost:9001       |
-| Health check    | http://localhost/api/health |
+| Service         | URL                        | Credentials (dev defaults)        |
+|-----------------|----------------------------|-----------------------------------|
+| App             | http://localhost            |                                   |
+| API docs        | http://localhost:8000/docs  |                                   |
+| Admin panel     | http://localhost:8000/admin | `admin` / `change-me-in-production` |
+| MinIO Console   | http://localhost:9001       | `minioadmin` / `minioadmin`       |
+| Health check    | http://localhost/api/health |                                   |
 
 ## Stopping
 

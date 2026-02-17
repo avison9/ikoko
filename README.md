@@ -14,6 +14,7 @@ A baby name flashcard app for discovering, saving, and sharing meaningful names 
 - **Analytics dashboard** — view stats (names created, shared decks with view counts), manage collaborators, and browse all comments and reactions
 - **Collaborators** — invite other users by username to co-edit a deck (add/edit/delete names)
 - **Dark mode** — full light/dark theme toggle, persisted across sessions
+- **Admin panel** — super-admin dashboard at `/admin` powered by SQLAdmin with full CRUD for all models (users, decks, names, comments, reactions, collaborators, view analytics); protected by session-based login with configurable credentials
 
 ## Architecture
 
@@ -71,17 +72,19 @@ Async API with SQLAlchemy 2.0 + asyncpg.
 | Module               | Purpose                                    |
 |----------------------|--------------------------------------------|
 | `app/main.py`        | FastAPI app entrypoint                     |
-| `app/config.py`      | pydantic-settings (DB, JWT, S3, cookies)   |
+| `app/config.py`      | pydantic-settings (DB, JWT, S3, cookies, admin) |
 | `app/models.py`      | SQLAlchemy models (User, Parent, Child, ParentView, Collaborator, Comment, Reaction) |
 | `app/schemas.py`     | Pydantic request/response schemas          |
 | `app/auth.py`        | Password hashing (argon2) + JWT creation   |
 | `app/database.py`    | Async session factory                      |
 | `app/dependencies.py`| Auth middleware (cookie → current user)    |
 | `app/s3.py`          | S3/MinIO presigned URL + upload helpers    |
+| `app/admin.py`       | SQLAdmin panel (auth + model views)        |
 | `routers/auth_routes.py`   | Register, Login, Logout, Me         |
 | `routers/parent_routes.py` | Baby deck CRUD, comments, reactions, collaborators |
 | `routers/child_routes.py`  | Name entry CRUD + audio upload (owner + collaborator) |
 | `routers/analytics_routes.py` | Analytics summary + feedback feed  |
+| `routers/profile_routes.py`   | User profile management             |
 
 ### Data model
 
@@ -106,6 +109,7 @@ User (id, full_name, email, country, username, password_hash)
 | Database   | PostgreSQL 16    | User data, decks, name entries     |
 | Storage    | MinIO / AWS S3   | Audio pronunciation files          |
 | Migrations | Alembic          | Database schema migrations         |
+| Admin      | SQLAdmin         | Super-admin CRUD panel at `/admin` |
 
 ## Local development
 
@@ -147,5 +151,6 @@ Then open `http://localhost` in your browser.
 | Database  | PostgreSQL 16                                        |
 | Storage   | AWS S3 / MinIO                                       |
 | Auth      | JWT (HttpOnly cookies), argon2 password hashing      |
+| Admin     | SQLAdmin (session-based auth, full CRUD)             |
 | Infra     | Docker Compose, Nginx, Alembic                       |
 | CDN libs  | html2canvas, gif.js, qrcode (view page only)        |
