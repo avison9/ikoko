@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Docker volumes
+pgdata/
+miniodata/
+
+# Audio uploads (sample/test files)
+audio/*.mp3
+audio/*.m4a
+audio/*.wav
+
+# Node (if any)
+node_modules/
+
+# Alembic
+backend/alembic/versions/__pycache__/
+
+# Data
+data/
+
+# Logs
+*.log

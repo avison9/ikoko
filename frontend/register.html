@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register - ìkókó</title>
+  <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/auth.css" />
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card">
+      <h1>Create Account</h1>
+      <p class="subtitle">Start building your ìkókó flashcards</p>
+
+      <form id="register-form">
+        <div class="form-group">
+          <label for="full_name">Full Name</label>
+          <input type="text" id="full_name" name="full_name" required />
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required />
+        </div>
+
+        <div class="form-group">
+          <label for="country">Country</label>
+          <div class="country-picker" id="country-picker">
+            <input type="text" id="country-search" class="country-search" placeholder="Search country..." autocomplete="off" />
+            <input type="hidden" id="country" name="country" required />
+            <div class="country-dropdown" id="country-dropdown"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" required minlength="3" />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required minlength="6" />
+        </div>
+
+        <div class="form-group">
+          <label for="confirm_password">Confirm Password</label>
+          <input type="password" id="confirm_password" name="confirm_password" required />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Register</button>
+      </form>
+
+      <div class="auth-footer">
+        Already have an account? <a id="login-link" href="/login.html">Log in</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/theme.js"></script>
+  <script>
+    // Forward ?next= param to login link
+    (function () {
+      const next = new URLSearchParams(window.location.search).get("next");
+      if (next) {
+        const link = document.getElementById("login-link");
+        if (link) link.href = "/login.html?next=" + encodeURIComponent(next);
+      }
+    })();
+  </script>
+  <script src="/static/js/auth.js"></script>
+</body>
+</html>
+
+

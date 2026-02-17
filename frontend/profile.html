@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile - ìkókó</title>
+  <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/auth.css" />
+  <link rel="stylesheet" href="/static/css/profile.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <span class="logo">ìkókó</span>
+    <div class="nav-links">
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/add.html">Add New</a>
+      <a href="/analytics.html">Analytics</a>
+      <a href="/profile.html">Profile</a>
+      <button id="theme-toggle" class="theme-toggle"></button>
+      <button id="logout-btn" class="btn-logout">Logout</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="dashboard-panel">
+      <h1>Profile</h1>
+
+      <!-- Profile Picture -->
+      <div class="profile-section">
+        <h2>Profile Picture</h2>
+        <div class="avatar-area">
+          <div class="avatar-wrapper" id="avatar-wrapper" title="Click to change picture">
+            <img id="avatar-img" src="" alt="Profile picture" />
+            <div class="avatar-overlay">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
+          </div>
+          <input type="file" id="avatar-input" accept="image/jpeg,image/png,image/gif,image/webp" hidden />
+          <button id="remove-avatar-btn" class="btn btn-outline btn-sm" style="display:none;">Remove</button>
+        </div>
+        <div id="avatar-message" class="field-message"></div>
+      </div>
+
+      <!-- Profile Details -->
+      <div class="profile-section">
+        <h2>Profile Details</h2>
+        <form id="profile-form">
+          <div class="form-group">
+            <label for="profile-fullname">Full Name</label>
+            <input type="text" id="profile-fullname" name="full_name" required />
+          </div>
+          <div class="form-group">
+            <label for="profile-username">Username</label>
+            <input type="text" id="profile-username" name="username" required minlength="3" />
+          </div>
+          <div class="form-group">
+            <label for="profile-email">Email</label>
+            <input type="email" id="profile-email" name="email" required />
+          </div>
+          <div class="form-group">
+            <label for="profile-country">Country</label>
+            <div class="country-picker" id="country-picker">
+              <input type="text" id="country-search" class="country-search" placeholder="Search country..." autocomplete="off" />
+              <input type="hidden" id="country" name="country" required />
+              <div class="country-dropdown" id="country-dropdown"></div>
+            </div>
+          </div>
+          <div id="profile-message" class="field-message"></div>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </form>
+      </div>
+
+      <!-- Change Password -->
+      <div class="profile-section">
+        <h2>Change Password</h2>
+        <form id="password-form">
+          <div class="form-group">
+            <label for="current-password">Current Password</label>
+            <input type="password" id="current-password" name="current_password" required />
+          </div>
+          <div class="form-group">
+            <label for="new-password">New Password</label>
+            <input type="password" id="new-password" name="new_password" required minlength="6" />
+          </div>
+          <div class="form-group">
+            <label for="confirm-password">Confirm New Password</label>
+            <input type="password" id="confirm-password" required minlength="6" />
+          </div>
+          <div id="password-message" class="field-message"></div>
+          <button type="submit" class="btn btn-primary">Change Password</button>
+        </form>
+      </div>
+
+      <!-- Account Info -->
+      <div class="profile-section">
+        <h2>Account Info</h2>
+        <p class="account-info-text">Member since <strong id="member-since"></strong></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/profile.js"></script>
+</body>
+</html>
