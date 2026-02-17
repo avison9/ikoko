@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - ìkókó</title>
+  <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/auth.css" />
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card">
+      <h1>Welcome Back</h1>
+      <p class="subtitle">Log in to your ìkókó collection</p>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" required />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Log In</button>
+      </form>
+
+      <div class="auth-footer">
+        Don't have an account? <a id="register-link" href="/register.html">Register</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/theme.js"></script>
+  <script>
+    // Forward ?next= param to register link
+    (function () {
+      const next = new URLSearchParams(window.location.search).get("next");
+      if (next) {
+        const link = document.getElementById("register-link");
+        if (link) link.href = "/register.html?next=" + encodeURIComponent(next);
+      }
+    })();
+  </script>
+  <script src="/static/js/auth.js"></script>
+</body>
+</html>

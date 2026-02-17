@@ -1,0 +1,99 @@
+/* =========================
+   ADD PAGE
+   ========================= */
+.add-page h1 {
+  font-size: 1.5rem;
+  margin: 0 0 1.5rem;
+}
+
+.section-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+  margin-bottom: 1.5rem;
+}
+
+.section-card h2 {
+  font-size: 1.15rem;
+  margin: 0 0 1rem;
+}
+
+/* Children list */
+.children-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+}
+
+.children-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.children-list li:last-child {
+  border-bottom: none;
+}
+
+.child-info {
+  flex: 1;
+}
+
+.child-info .child-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.child-info .child-meaning {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.child-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.child-actions button {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.child-actions button:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.child-actions .btn-delete-child:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.audio-status {
+  font-size: 0.8rem;
+  color: var(--success);
+}
+
+.parent-select-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.parent-select-row .form-group {
+  flex: 1;
+}
+
+@media (max-width: 480px) {
+  .section-card { padding: 1rem; }
+  .parent-select-row { flex-direction: column; align-items: stretch; }
+}

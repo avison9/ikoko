@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - ìkókó</title>
+  <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/dashboard.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <span class="logo">ìkókó</span>
+    <div class="nav-links">
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/add.html">Add New</a>
+      <a href="/analytics.html">Analytics</a>
+      <a href="/profile.html">Profile</a>
+      <button id="theme-toggle" class="theme-toggle"></button>
+      <button id="logout-btn" class="btn-logout">Logout</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="dashboard-panel">
+      <div class="dashboard-header">
+        <h1>Hi, <span id="welcome-name"></span></h1>
+        <div class="dashboard-header-actions">
+          <a href="/guide.html" class="btn btn-outline btn-guide">How to Use</a>
+          <a href="/add.html" class="btn btn-primary">+ Add Baby</a>
+        </div>
+      </div>
+
+      <div id="parent-grid" class="parent-grid"></div>
+
+      <div id="empty-state" class="empty-state" style="display:none;">
+        <p>No babies yet. Create your first one!</p>
+        <a href="/add.html" class="btn btn-primary">+ Add Baby</a>
+      </div>
+
+      <div id="pagination" class="pagination" style="display:none;">
+        <div class="pagination-controls">
+          <button id="prev-page" class="btn btn-outline pagination-btn" disabled>&lsaquo; Prev</button>
+          <span id="page-info" class="page-info"></span>
+          <button id="next-page" class="btn btn-outline pagination-btn">Next &rsaquo;</button>
+        </div>
+        <div class="page-size-control">
+          <button class="page-size-btn" data-size="6">6</button>
+          <button class="page-size-btn" data-size="12">12</button>
+          <button class="page-size-btn" data-size="24">24</button>
+          <button class="page-size-btn" data-size="50">50</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

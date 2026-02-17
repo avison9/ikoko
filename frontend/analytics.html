@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analytics - ìkókó</title>
+  <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/analytics.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <span class="logo">ìkókó</span>
+    <div class="nav-links">
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/add.html">Add New</a>
+      <a href="/analytics.html">Analytics</a>
+      <a href="/profile.html">Profile</a>
+      <button id="theme-toggle" class="theme-toggle"></button>
+      <button id="logout-btn" class="btn-logout">Logout</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="dashboard-panel">
+      <h1>Analytics</h1>
+
+      <!-- Stats row -->
+      <div class="stats-row">
+        <a href="/dashboard.html" class="stat-card">
+          <div class="stat-value" id="stat-names">0</div>
+          <div class="stat-label">Names Created</div>
+        </a>
+        <div class="stat-card clickable" id="toggle-shared">
+          <div class="stat-value" id="stat-shared">0</div>
+          <div class="stat-label">Shared Decks</div>
+        </div>
+      </div>
+
+      <!-- Shared list (hidden by default) -->
+      <div id="shared-list" class="section" style="display:none;">
+        <h2>Shared Decks</h2>
+        <div id="shared-items"></div>
+      </div>
+
+      <!-- Collaborator management -->
+      <div class="section">
+        <h2>Manage Collaborators</h2>
+        <div class="collab-form">
+          <div class="form-group">
+            <label for="collab-parent">Baby</label>
+            <select id="collab-parent">
+              <option value="">-- Select baby --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="collab-username">Username</label>
+            <input type="text" id="collab-username" placeholder="Enter username" />
+          </div>
+          <button id="collab-add-btn" class="collab-add-btn" title="Add collaborator">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+        </div>
+        <div id="collab-message" class="collab-message"></div>
+        <div id="collab-list" class="collab-list"></div>
+      </div>
+
+      <!-- Comments & Reactions feed -->
+      <div class="section">
+        <h2>Comments & Reactions</h2>
+        <div id="reactions-area" class="reactions-area">
+          <p class="empty-feed">No reactions yet.</p>
+        </div>
+        <div class="feed-divider"></div>
+        <div id="feed" class="feed">
+          <p class="empty-feed">No comments yet.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/analytics.js"></script>
+</body>
+</html>
