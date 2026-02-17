@@ -30,7 +30,6 @@ class AdminAuth(AuthenticationBackend):
 class UserAdmin(ModelView, model=User):
     column_list = [User.id, User.full_name, User.email, User.username, User.country, User.profile_picture, User.created_at]
     column_searchable_list = [User.username, User.email, User.full_name]
-    column_exclude_list = [User.password_hash]
     form_excluded_columns = [User.password_hash]
 
 
