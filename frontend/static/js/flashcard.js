@@ -463,8 +463,10 @@ async function downloadCardGif() {
       workerScript: workerUrl,
     });
 
-    gif.addFrame(frontCanvas, { delay: 5000 });
-    gif.addFrame(backCanvas, { delay: 5000 });
+    // Use multiple copies of each frame to ensure mobile viewers respect the delay.
+    // Some mobile apps cap per-frame delay, so we split 5s into 5x1000ms frames.
+    for (let i = 0; i < 5; i++) gif.addFrame(frontCanvas, { copy: true, delay: 1000 });
+    for (let i = 0; i < 5; i++) gif.addFrame(backCanvas, { copy: true, delay: 1000 });
 
     gif.on("finished", async (blob) => {
       URL.revokeObjectURL(workerUrl);

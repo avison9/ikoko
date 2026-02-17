@@ -22,6 +22,7 @@
         <div class="form-group">
           <label for="email">Email</label>
           <input type="email" id="email" name="email" required />
+          <span class="field-hint" id="email-hint"></span>
         </div>
 
         <div class="form-group">
@@ -36,11 +37,22 @@
         <div class="form-group">
           <label for="username">Username</label>
           <input type="text" id="username" name="username" required minlength="3" />
+          <span class="field-hint" id="username-hint"></span>
         </div>
 
         <div class="form-group">
           <label for="password">Password</label>
-          <input type="password" id="password" name="password" required minlength="6" />
+          <input type="password" id="password" name="password" required minlength="8" />
+          <div class="password-strength" id="password-strength">
+            <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+            <span class="strength-label" id="strength-label"></span>
+          </div>
+          <ul class="password-rules" id="password-rules">
+            <li id="rule-length">At least 8 characters</li>
+            <li id="rule-upper">One uppercase letter</li>
+            <li id="rule-lower">One lowercase letter</li>
+            <li id="rule-digit">One digit</li>
+          </ul>
         </div>
 
         <div class="form-group">

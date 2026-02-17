@@ -2,6 +2,17 @@
 (function () {
   const API = "/api/profile";
 
+  let currentUsername = "";
+  let currentEmail = "";
+
+  function debounce(fn, ms) {
+    let timer;
+    return function (...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn.apply(this, args), ms);
+    };
+  }
+
   // ── Elements ──────────────────────────────
   const avatarWrapper = document.getElementById("avatar-wrapper");
   const avatarImg = document.getElementById("avatar-img");
@@ -42,9 +53,11 @@
     }
 
     // Form fields
+    currentUsername = user.username || "";
+    currentEmail = user.email || "";
     document.getElementById("profile-fullname").value = user.full_name || "";
-    document.getElementById("profile-username").value = user.username || "";
-    document.getElementById("profile-email").value = user.email || "";
+    document.getElementById("profile-username").value = currentUsername;
+    document.getElementById("profile-email").value = currentEmail;
 
     // Country
     const countryHidden = document.getElementById("country");
@@ -172,6 +185,127 @@
     }
   });
 
+  // ── Real-time username/email checks ──────
+  const profileUsernameInput = document.getElementById("profile-username");
+  const profileUsernameHint = document.getElementById("profile-username-hint");
+  const profileEmailInput = document.getElementById("profile-email");
+  const profileEmailHint = document.getElementById("profile-email-hint");
+
+  if (profileUsernameInput && profileUsernameHint) {
+    profileUsernameInput.addEventListener("input", debounce(async function () {
+      const val = this.value.trim();
+      if (val.length < 3) {
+        profileUsernameHint.textContent = "";
+        profileUsernameHint.className = "field-hint";
+        return;
+      }
+      if (val === currentUsername) {
+        profileUsernameHint.textContent = "";
+        profileUsernameHint.className = "field-hint";
+        return;
+      }
+      profileUsernameHint.textContent = "Checking...";
+      profileUsernameHint.className = "field-hint checking";
+      try {
+        const res = await fetch(`/api/auth/check-username/${encodeURIComponent(val)}`);
+        const data = await res.json();
+        if (data.taken) {
+          profileUsernameHint.textContent = "Username is already taken";
+          profileUsernameHint.className = "field-hint taken";
+        } else {
+          profileUsernameHint.textContent = "Username is available";
+          profileUsernameHint.className = "field-hint available";
+        }
+      } catch {
+        profileUsernameHint.textContent = "";
+        profileUsernameHint.className = "field-hint";
+      }
+    }, 400));
+  }
+
+  if (profileEmailInput && profileEmailHint) {
+    profileEmailInput.addEventListener("input", debounce(async function () {
+      const val = this.value.trim();
+      if (!val || !val.includes("@")) {
+        profileEmailHint.textContent = "";
+        profileEmailHint.className = "field-hint";
+        return;
+      }
+      if (val === currentEmail) {
+        profileEmailHint.textContent = "";
+        profileEmailHint.className = "field-hint";
+        return;
+      }
+      profileEmailHint.textContent = "Checking...";
+      profileEmailHint.className = "field-hint checking";
+      try {
+        const res = await fetch(`/api/auth/check-email/${encodeURIComponent(val)}`);
+        const data = await res.json();
+        if (data.taken) {
+          profileEmailHint.textContent = "An account with this email already exists";
+          profileEmailHint.className = "field-hint taken";
+        } else {
+          profileEmailHint.textContent = "";
+          profileEmailHint.className = "field-hint";
+        }
+      } catch {
+        profileEmailHint.textContent = "";
+        profileEmailHint.className = "field-hint";
+      }
+    }, 400));
+  }
+
+  // ── Password strength (profile) ──────────
+  function checkPasswordRules(pw) {
+    return {
+      length: pw.length >= 8,
+      upper: /[A-Z]/.test(pw),
+      lower: /[a-z]/.test(pw),
+      digit: /\d/.test(pw),
+    };
+  }
+
+  const newPwInput = document.getElementById("new-password");
+  if (newPwInput) {
+    newPwInput.addEventListener("input", function () {
+      const pw = this.value;
+      const rules = checkPasswordRules(pw);
+      const passed = Object.values(rules).filter(Boolean).length;
+
+      document.getElementById("rule-length").className = pw.length === 0 ? "" : rules.length ? "pass" : "fail";
+      document.getElementById("rule-upper").className = pw.length === 0 ? "" : rules.upper ? "pass" : "fail";
+      document.getElementById("rule-lower").className = pw.length === 0 ? "" : rules.lower ? "pass" : "fail";
+      document.getElementById("rule-digit").className = pw.length === 0 ? "" : rules.digit ? "pass" : "fail";
+
+      const fill = document.getElementById("strength-fill");
+      const label = document.getElementById("strength-label");
+
+      if (pw.length === 0) {
+        fill.style.width = "0";
+        label.textContent = "";
+        return;
+      }
+
+      let score = passed;
+      if (pw.length >= 12) score += 1;
+      if (/[^A-Za-z0-9]/.test(pw)) score += 1;
+
+      if (score <= 2) {
+        fill.style.width = "25%"; fill.style.backgroundColor = "#ef4444";
+        label.textContent = "Weak"; label.style.color = "#ef4444";
+      } else if (score <= 4) {
+        fill.style.width = "55%"; fill.style.backgroundColor = "#f59e0b";
+        label.textContent = "Fair"; label.style.color = "#f59e0b";
+      } else if (score <= 5) {
+        fill.style.width = "80%"; fill.style.backgroundColor = "#22c55e";
+        label.textContent = "Strong"; label.style.color = "#22c55e";
+      } else {
+        fill.style.width = "100%"; fill.style.backgroundColor = "#16a34a";
+        label.textContent = "Very strong"; label.style.color = "#16a34a";
+      }
+    });
+  }
+
   // ── Password form submit ──────────────────
   passwordForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -179,13 +313,14 @@
     const newPassword = document.getElementById("new-password").value;
     const confirmPassword = document.getElementById("confirm-password").value;
 
-    if (newPassword !== confirmPassword) {
-      showMessage(passwordMessage, "New passwords do not match", "error");
+    const rules = checkPasswordRules(newPassword);
+    if (!rules.length || !rules.upper || !rules.lower || !rules.digit) {
+      showMessage(passwordMessage, "Password must be at least 8 characters with uppercase, lowercase, and a digit", "error");
       return;
     }
 
-    if (newPassword.length < 6) {
-      showMessage(passwordMessage, "Password must be at least 6 characters", "error");
+    if (newPassword !== confirmPassword) {
+      showMessage(passwordMessage, "New passwords do not match", "error");
       return;
     }
 
