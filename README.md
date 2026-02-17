@@ -1,6 +1,6 @@
-# ikoko
+# ìkókó
 
-A baby name flashcard app for discovering, saving, and sharing meaningful names with pronunciation and cultural context. Built for the African diaspora community.
+A baby name flashcard app for discovering, saving, and sharing meaningful names with pronunciation and cultural context.
 
 ## What it does
 
@@ -9,6 +9,10 @@ A baby name flashcard app for discovering, saving, and sharing meaningful names 
 - **Audio playback** — hear the correct pronunciation for each name
 - **Download cards** — export any name as an animated GIF (front flips to back in 5 seconds)
 - **Share decks** — generate a shareable link + QR code for friends and family to view your name collection
+- **Reactions** — react to shared decks with 12 emoji options (up to 10 per emoji per user); right-click to undo
+- **Comments** — leave comments on any shared deck; owners see all feedback in the analytics page
+- **Analytics dashboard** — view stats (names created, shared decks with view counts), manage collaborators, and browse all comments and reactions
+- **Collaborators** — invite other users by username to co-edit a deck (add/edit/delete names)
 - **Dark mode** — full light/dark theme toggle, persisted across sessions
 
 ## Architecture
@@ -50,14 +54,15 @@ A baby name flashcard app for discovering, saving, and sharing meaningful names 
 
 No framework, no build step. Plain static files served by Nginx.
 
-| Page             | File             | Purpose                              |
-|------------------|------------------|--------------------------------------|
-| Login            | `login.html`     | JWT auth via HttpOnly cookie         |
-| Register         | `register.html`  | Account creation with country picker |
-| Dashboard        | `dashboard.html` | Grid of baby decks, CRUD, pagination |
-| Add Names        | `add.html`       | Add/edit name entries + audio upload |
-| View Flashcards  | `view.html`      | Flip cards, download GIF, share link |
-| Guide            | `guide.html`     | How-to walkthrough                   |
+| Page             | File             | Purpose                                          |
+|------------------|------------------|--------------------------------------------------|
+| Login            | `login.html`     | JWT auth via HttpOnly cookie                     |
+| Register         | `register.html`  | Account creation with country picker             |
+| Dashboard        | `dashboard.html` | Grid of baby decks, CRUD, pagination             |
+| Add Names        | `add.html`       | Add/edit name entries + audio upload              |
+| View Flashcards  | `view.html`      | Flip cards, download GIF, share, react, comment  |
+| Analytics        | `analytics.html` | Stats, collaborator management, feedback feed    |
+| Guide            | `guide.html`     | How-to walkthrough                               |
 
 ### Backend (Python / FastAPI)
 
@@ -67,15 +72,16 @@ Async API with SQLAlchemy 2.0 + asyncpg.
 |----------------------|--------------------------------------------|
 | `app/main.py`        | FastAPI app entrypoint                     |
 | `app/config.py`      | pydantic-settings (DB, JWT, S3, cookies)   |
-| `app/models.py`      | SQLAlchemy models (User, Parent, Child)    |
+| `app/models.py`      | SQLAlchemy models (User, Parent, Child, ParentView, Collaborator, Comment, Reaction) |
 | `app/schemas.py`     | Pydantic request/response schemas          |
 | `app/auth.py`        | Password hashing (argon2) + JWT creation   |
 | `app/database.py`    | Async session factory                      |
 | `app/dependencies.py`| Auth middleware (cookie → current user)    |
 | `app/s3.py`          | S3/MinIO presigned URL + upload helpers    |
 | `routers/auth_routes.py`   | Register, Login, Logout, Me         |
-| `routers/parent_routes.py` | Baby deck CRUD                       |
-| `routers/child_routes.py`  | Name entry CRUD + audio upload       |
+| `routers/parent_routes.py` | Baby deck CRUD, comments, reactions, collaborators |
+| `routers/child_routes.py`  | Name entry CRUD + audio upload (owner + collaborator) |
+| `routers/analytics_routes.py` | Analytics summary + feedback feed  |
 
 ### Data model
 
@@ -83,8 +89,12 @@ Async API with SQLAlchemy 2.0 + asyncpg.
 User (id, full_name, email, country, username, password_hash)
   |
   +--< Parent (id, user_id, label, created_at, updated_at)
-        |
-        +--< Child (id, parent_id, name, phonetic, meaning, passage, audio_key, sort_order, created_at)
+  |     |
+  |     +--< Child (id, parent_id, name, phonetic, meaning, passage, audio_key, sort_order)
+  |     +--< Collaborator (id, user_id, parent_id)
+  |     +--< Comment (id, user_id, parent_id, text, created_at)
+  |     +--< Reaction (id, user_id, parent_id, emoji, created_at)  — up to 10 per user per emoji
+  |     +--< ParentView (id, user_id, parent_id, viewed_at)  — view tracking for analytics
 ```
 
 ### Infrastructure
