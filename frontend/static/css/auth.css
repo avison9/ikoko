@@ -141,6 +141,94 @@
   font-size: 0.85rem;
 }
 
+/* Field availability hints */
+.field-hint {
+  display: block;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  min-height: 1.2em;
+}
+
+.field-hint.taken {
+  color: #ef4444;
+}
+
+.field-hint.available {
+  color: #22c55e;
+}
+
+.field-hint.checking {
+  color: var(--text-muted);
+}
+
+/* Password strength indicator */
+.password-strength {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.strength-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.strength-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 2px;
+  transition: width 0.3s, background-color 0.3s;
+}
+
+.strength-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.password-rules {
+  list-style: none;
+  padding: 0;
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.password-rules li {
+  padding: 0.1rem 0;
+  padding-left: 1.2rem;
+  position: relative;
+}
+
+.password-rules li::before {
+  content: "\2022";
+  position: absolute;
+  left: 0.2rem;
+  color: var(--text-muted);
+}
+
+.password-rules li.pass {
+  color: #22c55e;
+}
+
+.password-rules li.pass::before {
+  content: "\2713";
+  color: #22c55e;
+}
+
+.password-rules li.fail {
+  color: #ef4444;
+}
+
+.password-rules li.fail::before {
+  content: "\2717";
+  color: #ef4444;
+}
+
 @media (max-width: 480px) {
   .auth-card { padding: 1.5rem 1.25rem; }
   .form-row { flex-direction: column; gap: 0; }

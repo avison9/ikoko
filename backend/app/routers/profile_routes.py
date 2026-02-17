@@ -116,9 +116,6 @@ async def change_password(
     if not verify_password(body.current_password, user.password_hash):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
 
-    if len(body.new_password) < 6:
-        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
-
     user.password_hash = hash_password(body.new_password)
     await db.commit()
     return {"message": "Password changed successfully"}

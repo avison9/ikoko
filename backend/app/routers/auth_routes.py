@@ -16,11 +16,13 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 @router.post("/register", response_model=UserResponse, status_code=201)
 async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     # Check uniqueness
-    existing = await db.execute(
-        select(User).where((User.username == body.username) | (User.email == body.email))
-    )
+    existing = await db.execute(select(User).where(User.username == body.username))
     if existing.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="Username or email already taken")
+        raise HTTPException(status_code=409, detail="Username already taken")
+
+    existing = await db.execute(select(User).where(User.email == body.email))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Email already taken")
 
     user = User(
         full_name=body.full_name,
@@ -33,6 +35,20 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(user)
     return user
+
+
+@router.get("/check-username/{username}")
+async def check_username(username: str, db: AsyncSession = Depends(get_db)):
+    existing = await db.execute(select(User).where(User.username == username))
+    taken = existing.scalar_one_or_none() is not None
+    return {"taken": taken}
+
+
+@router.get("/check-email/{email}")
+async def check_email(email: str, db: AsyncSession = Depends(get_db)):
+    existing = await db.execute(select(User).where(User.email == email))
+    taken = existing.scalar_one_or_none() is not None
+    return {"taken": taken}
 
 
 @router.post("/login")
