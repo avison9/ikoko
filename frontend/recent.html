@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recent - ìkókó</title>
+  <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/dashboard.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <span class="logo">ìkókó</span>
+    <div class="nav-links">
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/add.html">Add New</a>
+      <a href="/recent.html">Recent</a>
+      <a href="/analytics.html">Analytics</a>
+      <a href="/profile.html">Profile</a>
+      <button id="theme-toggle" class="theme-toggle"></button>
+      <button id="logout-btn" class="btn-logout">Logout</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="dashboard-panel">
+      <div class="dashboard-header">
+        <h1>Recently Viewed</h1>
+      </div>
+
+      <div id="recent-grid" class="parent-grid"></div>
+
+      <div id="empty-state" class="empty-state" style="display:none;">
+        <p>No recently viewed cards.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/recent.js"></script>
+</body>
+</html>

@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.dependencies import get_current_user, get_optional_user
-from app.models import Child, Collaborator, Comment, Parent, ParentView, Reaction, User
+from app.models import Child, Collaborator, Comment, CommentReaction, Parent, ParentView, Reaction, User
 from app.s3 import delete_prefix, presigned_url
 from app.schemas import (
     ChildOut,
@@ -15,6 +15,8 @@ from app.schemas import (
     CollaboratorOut,
     CommentCreate,
     CommentOut,
+    CommentReactionOut,
+    CommentReactionToggle,
     ParentCreate,
     ParentDetail,
     ParentOut,
@@ -463,6 +465,116 @@ async def list_comments(
             created_at=c.created_at,
         )
         for c in comments
+    ]
+
+
+# ── Comment Reactions ─────────────────────────────────
+ALLOWED_COMMENT_EMOJIS = ["\u2764\uFE0F", "\U0001F44D", "\U0001F525", "\U0001F60D", "\U0001F4AF"]
+
+
+@router.post("/{parent_id}/comments/{comment_id}/reactions", status_code=200)
+async def toggle_comment_reaction(
+    parent_id: int,
+    comment_id: int,
+    body: CommentReactionToggle,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if body.emoji not in ALLOWED_COMMENT_EMOJIS:
+        raise HTTPException(status_code=400, detail="Emoji not allowed")
+
+    # Verify comment belongs to parent
+    result = await db.execute(
+        select(Comment).where(Comment.id == comment_id, Comment.parent_id == parent_id)
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    # Toggle: if exists remove, else add
+    existing = await db.execute(
+        select(CommentReaction).where(
+            CommentReaction.user_id == user.id,
+            CommentReaction.comment_id == comment_id,
+            CommentReaction.emoji == body.emoji,
+        )
+    )
+    reaction = existing.scalar_one_or_none()
+
+    if reaction:
+        await db.delete(reaction)
+        await db.commit()
+        return {"action": "removed"}
+    else:
+        new_reaction = CommentReaction(
+            user_id=user.id, comment_id=comment_id, emoji=body.emoji
+        )
+        db.add(new_reaction)
+        await db.commit()
+        return {"action": "added"}
+
+
+@router.get(
+    "/{parent_id}/comments/{comment_id}/reactions",
+    response_model=list[CommentReactionOut],
+)
+async def list_comment_reactions(
+    parent_id: int,
+    comment_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(CommentReaction)
+        .where(CommentReaction.comment_id == comment_id)
+        .options(selectinload(CommentReaction.user))
+        .order_by(CommentReaction.created_at.desc())
+    )
+    reactions = result.scalars().all()
+    return [
+        CommentReactionOut(
+            id=r.id,
+            user_id=r.user_id,
+            username=r.user.username,
+            comment_id=r.comment_id,
+            emoji=r.emoji,
+        )
+        for r in reactions
+    ]
+
+
+@router.get(
+    "/{parent_id}/public/comments/{comment_id}/reactions",
+    response_model=list[CommentReactionOut],
+)
+async def list_comment_reactions_public(
+    parent_id: int,
+    comment_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    # Verify parent is shared
+    result = await db.execute(select(Parent).where(Parent.id == parent_id))
+    parent = result.scalar_one_or_none()
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent not found")
+    if not parent.is_shared:
+        raise HTTPException(status_code=403, detail="This card has not been shared")
+
+    result = await db.execute(
+        select(CommentReaction)
+        .where(CommentReaction.comment_id == comment_id)
+        .options(selectinload(CommentReaction.user))
+        .order_by(CommentReaction.created_at.desc())
+    )
+    reactions = result.scalars().all()
+    return [
+        CommentReactionOut(
+            id=r.id,
+            user_id=r.user_id,
+            username=r.user.username,
+            comment_id=r.comment_id,
+            emoji=r.emoji,
+        )
+        for r in reactions
     ]
 
 
