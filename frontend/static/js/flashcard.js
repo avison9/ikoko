@@ -15,6 +15,7 @@ function applyGuestUI() {
   // Navbar: hide app links, show login/register
   const navDashboard = document.getElementById("nav-dashboard");
   const navAdd = document.getElementById("nav-add");
+  const navRecent = document.getElementById("nav-recent");
   const navAnalytics = document.getElementById("nav-analytics");
   const navProfile = document.getElementById("nav-profile");
   const logoutBtn = document.getElementById("logout-btn");
@@ -23,6 +24,7 @@ function applyGuestUI() {
 
   if (navDashboard) navDashboard.style.display = "none";
   if (navAdd) navAdd.style.display = "none";
+  if (navRecent) navRecent.style.display = "none";
   if (navAnalytics) navAnalytics.style.display = "none";
   if (navProfile) navProfile.style.display = "none";
   if (logoutBtn) logoutBtn.style.display = "none";
@@ -223,6 +225,11 @@ function updatePageMeta() {
   }
   loadCards();
 })();
+
+// Close emoji pickers on outside click/tap
+document.addEventListener("click", () => {
+  document.querySelectorAll(".comment-react-trigger.open").forEach((t) => t.classList.remove("open"));
+});
 
 /* =========================
    HELPERS
@@ -788,8 +795,12 @@ function renderReactions(parentId, reactions) {
 }
 
 const COMMENTS_PER_PAGE = 10;
+const COMMENT_REACTION_EMOJIS = ["\u2764\uFE0F", "\uD83D\uDC4D", "\uD83D\uDD25", "\uD83D\uDE0D", "\uD83D\uDCAF"];
 let allComments = [];
 let commentsShown = 0;
+let commentsParentId = null;
+// Cache: { [commentId]: [ {id, user_id, username, comment_id, emoji}, ... ] }
+let commentReactionsCache = {};
 
 function renderComments(parentId, comments) {
   const list = document.getElementById("comments-list");
@@ -797,6 +808,8 @@ function renderComments(parentId, comments) {
 
   allComments = comments;
   commentsShown = 0;
+  commentsParentId = parentId;
+  commentReactionsCache = {};
   list.innerHTML = "";
 
   if (comments.length === 0) {
@@ -819,20 +832,30 @@ function showMoreComments() {
   nextBatch.forEach((c) => {
     const item = document.createElement("div");
     item.className = "comment-item";
+    item.dataset.commentId = c.id;
     const avatarHtml = c.profile_picture_url
       ? `<img class="comment-avatar" src="${escapeHtml(c.profile_picture_url)}" alt="" />`
       : `<div class="comment-avatar comment-avatar-default"></div>`;
+    const authorTag = isGuest
+      ? `<span class="comment-author">@${escapeHtml(c.username)}</span>`
+      : `<span class="comment-author comment-author-clickable" data-username="${escapeHtml(c.username)}">@${escapeHtml(c.username)}</span>`;
     item.innerHTML = `
       ${avatarHtml}
       <div class="comment-body">
         <div class="comment-header">
-          <span class="comment-author">${escapeHtml(c.full_name)}</span>
+          ${authorTag}
           <span class="comment-time">${formatDate(c.created_at)}</span>
         </div>
         <div class="comment-text">${escapeHtml(c.text)}</div>
+        <div class="comment-reactions" data-comment-id="${c.id}"></div>
       </div>
     `;
+    const authorEl = item.querySelector(".comment-author-clickable");
+    if (authorEl) {
+      authorEl.addEventListener("click", () => showUserProfileModal(authorEl.dataset.username));
+    }
     list.appendChild(item);
+    loadCommentReactions(c.id);
   });
 
   commentsShown += nextBatch.length;
@@ -846,6 +869,116 @@ function showMoreComments() {
     btn.addEventListener("click", showMoreComments);
     list.appendChild(btn);
   }
+}
+
+async function loadCommentReactions(commentId) {
+  const parentId = commentsParentId;
+  const apiBase = isGuest
+    ? `/api/parents/${parentId}/public/comments/${commentId}/reactions`
+    : `/api/parents/${parentId}/comments/${commentId}/reactions`;
+  try {
+    const res = await fetch(apiBase, { credentials: "include" });
+    if (!res.ok) return;
+    const reactions = await res.json();
+    commentReactionsCache[commentId] = reactions;
+    renderCommentReactions(commentId);
+  } catch { /* silent */ }
+}
+
+function renderCommentReactions(commentId) {
+  const container = document.querySelector(`.comment-reactions[data-comment-id="${commentId}"]`);
+  if (!container) return;
+
+  const reactions = commentReactionsCache[commentId] || [];
+  const parentId = commentsParentId;
+
+  // Build counts
+  const counts = {};
+  const userReacted = {};
+  COMMENT_REACTION_EMOJIS.forEach((e) => { counts[e] = 0; userReacted[e] = false; });
+  reactions.forEach((r) => {
+    counts[r.emoji] = (counts[r.emoji] || 0) + 1;
+    if (r.user_id === currentUserId) userReacted[r.emoji] = true;
+  });
+
+  // Only show emojis that have at least one reaction
+  const activeEmojis = COMMENT_REACTION_EMOJIS.filter((e) => counts[e] > 0);
+
+  // Build HTML: active reaction pills + add-reaction trigger for logged-in users
+  let html = activeEmojis.map((emoji) => {
+    const active = userReacted[emoji] ? " active" : "";
+    const disabled = isGuest ? " disabled" : "";
+    return `<button class="comment-reaction-btn${active}" data-emoji="${emoji}"${disabled}>${emoji} <span class="count">${counts[emoji]}</span></button>`;
+  }).join("");
+
+  // Add-reaction trigger (only for logged-in users)
+  if (!isGuest) {
+    html += `<span class="comment-react-trigger" data-comment-id="${commentId}" title="React">
+      <span class="comment-react-trigger-icon">\u263A\uFE0F</span>
+      <span class="comment-react-picker">${COMMENT_REACTION_EMOJIS.map((e) => `<button class="comment-picker-emoji" data-emoji="${e}">${e}</button>`).join("")}</span>
+    </span>`;
+  }
+
+  container.innerHTML = html;
+
+  if (isGuest) return;
+
+  // Click handlers for existing reaction pills (toggle off)
+  container.querySelectorAll(".comment-reaction-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/parents/${parentId}/comments/${commentId}/reactions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ emoji: btn.dataset.emoji }),
+        });
+        if (res.ok) {
+          await loadCommentReactions(commentId);
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  // Trigger click to toggle picker (works on mobile + desktop fallback)
+  const trigger = container.querySelector(".comment-react-trigger");
+  if (trigger) {
+    trigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const wasOpen = trigger.classList.contains("open");
+      closeAllReactPickers();
+      if (!wasOpen) trigger.classList.add("open");
+    });
+  }
+
+  // Picker emoji click handlers
+  container.querySelectorAll(".comment-picker-emoji").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      closeAllReactPickers();
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/parents/${parentId}/comments/${commentId}/reactions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ emoji: btn.dataset.emoji }),
+        });
+        if (res.ok) {
+          await loadCommentReactions(commentId);
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+function closeAllReactPickers() {
+  document.querySelectorAll(".comment-react-trigger.open").forEach((t) => t.classList.remove("open"));
 }
 
 function attachCommentForm(parentId) {
@@ -1009,3 +1142,43 @@ function attachCommentForm(parentId) {
     if (e.target === shareModal) shareModal.style.display = "none";
   });
 })();
+
+/* =========================
+   USER PROFILE MODAL
+   ========================= */
+async function showUserProfileModal(username) {
+  try {
+    const res = await fetch(`/api/users/${encodeURIComponent(username)}`, { credentials: "include" });
+    if (!res.ok) return;
+    const profile = await res.json();
+
+    const avatarHtml = profile.profile_picture_url
+      ? `<img class="profile-modal-avatar" src="${escapeHtml(profile.profile_picture_url)}" alt="" />`
+      : `<div class="profile-modal-avatar profile-modal-avatar-default"></div>`;
+
+    const joinDate = new Date(profile.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = `
+      <div class="modal user-profile-modal">
+        <button class="profile-modal-close">&times;</button>
+        ${avatarHtml}
+        <h3>${escapeHtml(profile.full_name)}</h3>
+        <p class="profile-modal-username">@${escapeHtml(profile.username)}</p>
+        ${profile.country ? `<p class="profile-modal-location">${escapeHtml(profile.country)}</p>` : ""}
+        <p class="profile-modal-joined">Joined ${joinDate}</p>
+        <p class="profile-modal-count">${profile.parent_count} ${profile.parent_count === 1 ? "baby" : "babies"} posted</p>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+    overlay.querySelector(".profile-modal-close").addEventListener("click", () => overlay.remove());
+  } catch (err) {
+    console.error("Failed to load user profile:", err);
+  }
+}

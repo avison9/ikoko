@@ -150,3 +150,25 @@ class Reaction(Base):
 
     user: Mapped["User"] = relationship()
     parent: Mapped["Parent"] = relationship()
+
+
+class CommentReaction(Base):
+    __tablename__ = "comment_reactions"
+    __table_args__ = (
+        UniqueConstraint("user_id", "comment_id", "emoji", name="uq_comment_reaction"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    comment_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("comments.id", ondelete="CASCADE"), nullable=False
+    )
+    emoji: Mapped[str] = mapped_column(String(10), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    user: Mapped["User"] = relationship()
+    comment: Mapped["Comment"] = relationship()

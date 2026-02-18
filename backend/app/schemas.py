@@ -145,6 +145,16 @@ class ChildUpdate(BaseModel):
     sort_order: int | None = None
 
 
+# ── Recent ───────────────────────────────────────────
+class RecentParentOut(BaseModel):
+    parent_id: int
+    label: str
+    owner_name: str
+    children_count: int = 0
+    is_shared: bool = False
+    last_viewed_at: datetime
+
+
 # ── Analytics ─────────────────────────────────────────
 class SharedParentSummary(BaseModel):
     parent_id: int
@@ -190,6 +200,19 @@ class ReactionOut(BaseModel):
     emoji: str
 
 
+# ── Comment Reactions ────────────────────────────────
+class CommentReactionToggle(BaseModel):
+    emoji: str
+
+
+class CommentReactionOut(BaseModel):
+    id: int
+    user_id: int
+    username: str
+    comment_id: int
+    emoji: str
+
+
 # ── Collaborators ─────────────────────────────────────
 class CollaboratorAdd(BaseModel):
     username: str
@@ -200,3 +223,13 @@ class CollaboratorOut(BaseModel):
     username: str
     full_name: str
     created_at: datetime
+
+
+# ── Public User Profile ──────────────────────────────
+class PublicUserProfile(BaseModel):
+    username: str
+    full_name: str
+    country: str
+    profile_picture_url: str | None = None
+    created_at: datetime
+    parent_count: int
