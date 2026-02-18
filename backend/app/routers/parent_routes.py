@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, get_optional_user
 from app.models import Child, Collaborator, Comment, Parent, ParentView, Reaction, User
 from app.s3 import delete_prefix, presigned_url
 from app.schemas import (
@@ -19,6 +19,7 @@ from app.schemas import (
     ParentDetail,
     ParentOut,
     ParentUpdate,
+    PublicParentDetail,
     ReactionOut,
     ReactionToggle,
 )
@@ -226,6 +227,154 @@ async def delete_parent(
 
     await db.delete(parent)
     await db.commit()
+
+
+# ── Public (guest-friendly) view ─────────────────────
+@router.get("/{parent_id}/public", response_model=PublicParentDetail)
+async def get_parent_public(
+    parent_id: int,
+    user: User | None = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Parent)
+        .where(Parent.id == parent_id)
+        .options(
+            selectinload(Parent.children),
+            selectinload(Parent.user),
+            selectinload(Parent.collaborators).selectinload(Collaborator.user),
+        )
+    )
+    parent = result.scalar_one_or_none()
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent not found")
+
+    if not parent.is_shared:
+        raise HTTPException(status_code=403, detail="This card has not been shared")
+
+    is_guest = user is None
+    is_owner = False if is_guest else parent.user_id == user.id
+    is_collaborator = False if is_guest else any(c.user_id == user.id for c in parent.collaborators)
+
+    # Track view for non-owner/non-collaborator (both guests and logged-in users)
+    if not is_owner and not is_collaborator:
+        one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
+        if is_guest:
+            # For guests, just record (no user_id dedup — throttled by 1h per parent via session/IP in future)
+            db.add(ParentView(user_id=None, parent_id=parent_id))
+            await db.commit()
+        else:
+            recent_view = await db.execute(
+                select(ParentView).where(
+                    ParentView.user_id == user.id,
+                    ParentView.parent_id == parent_id,
+                    ParentView.viewed_at > one_hour_ago,
+                )
+            )
+            if not recent_view.scalar_one_or_none():
+                db.add(ParentView(user_id=user.id, parent_id=parent_id))
+                await db.commit()
+
+    children_out = []
+    for c in parent.children:
+        children_out.append(
+            ChildOut(
+                id=c.id,
+                name=c.name,
+                phonetic=c.phonetic,
+                meaning=c.meaning,
+                passage=c.passage,
+                audio_url=presigned_url(c.audio_key),
+                sort_order=c.sort_order,
+                created_at=c.created_at,
+            )
+        )
+
+    collaborator_names = [c.user.username for c in parent.collaborators]
+
+    return PublicParentDetail(
+        id=parent.id,
+        label=parent.label,
+        children=children_out,
+        is_owner=is_owner,
+        owner_name=parent.user.full_name,
+        is_shared=parent.is_shared,
+        is_collaborator=is_collaborator,
+        collaborator_names=collaborator_names,
+        is_guest=is_guest,
+        created_at=parent.created_at,
+    )
+
+
+# ── Public read-only reactions & comments ────────────
+@router.get("/{parent_id}/public/reactions", response_model=list[ReactionOut])
+async def list_reactions_public(
+    parent_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Parent).where(Parent.id == parent_id)
+    )
+    parent = result.scalar_one_or_none()
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent not found")
+    if not parent.is_shared:
+        raise HTTPException(status_code=403, detail="This card has not been shared")
+
+    result = await db.execute(
+        select(Reaction)
+        .where(Reaction.parent_id == parent_id)
+        .options(selectinload(Reaction.user))
+        .order_by(Reaction.created_at.desc())
+    )
+    reactions = result.scalars().all()
+    return [
+        ReactionOut(
+            id=r.id,
+            user_id=r.user_id,
+            username=r.user.username,
+            parent_id=r.parent_id,
+            emoji=r.emoji,
+        )
+        for r in reactions
+    ]
+
+
+@router.get("/{parent_id}/public/comments", response_model=list[CommentOut])
+async def list_comments_public(
+    parent_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Parent).where(Parent.id == parent_id)
+    )
+    parent = result.scalar_one_or_none()
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent not found")
+    if not parent.is_shared:
+        raise HTTPException(status_code=403, detail="This card has not been shared")
+
+    result = await db.execute(
+        select(Comment)
+        .where(Comment.parent_id == parent_id)
+        .options(selectinload(Comment.user), selectinload(Comment.parent))
+        .order_by(Comment.created_at.desc())
+    )
+    comments = result.scalars().all()
+    return [
+        CommentOut(
+            id=c.id,
+            user_id=c.user_id,
+            username=c.user.username,
+            full_name=c.user.full_name,
+            profile_picture_url=presigned_url(c.user.profile_picture) if c.user.profile_picture else None,
+            parent_id=c.parent_id,
+            parent_label=c.parent.label,
+            text=c.text,
+            created_at=c.created_at,
+        )
+        for c in comments
+    ]
 
 
 # ── Share toggle ─────────────────────────────────────

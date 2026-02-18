@@ -113,6 +113,21 @@ class ParentDetail(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PublicParentDetail(BaseModel):
+    id: int
+    label: str
+    children: list[ChildOut] = []
+    is_owner: bool = False
+    owner_name: str = ""
+    is_shared: bool = False
+    is_collaborator: bool = False
+    collaborator_names: list[str] = []
+    is_guest: bool = False
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 # ── Child ─────────────────────────────────────────────
 class ChildCreate(BaseModel):
     name: str
@@ -135,6 +150,8 @@ class SharedParentSummary(BaseModel):
     parent_id: int
     label: str
     view_count: int
+    user_view_count: int = 0
+    guest_view_count: int = 0
 
 
 class AnalyticsSummary(BaseModel):

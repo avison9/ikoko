@@ -82,8 +82,8 @@ class ParentView(Base):
     __tablename__ = "parent_views"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    user_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True
     )
     parent_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("parents.id", ondelete="CASCADE"), nullable=False
