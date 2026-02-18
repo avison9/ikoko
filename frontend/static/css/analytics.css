@@ -63,6 +63,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
   padding: 0.6rem 0;
   border-bottom: 1px solid var(--border);
 }
@@ -78,6 +80,12 @@
 .shared-item .views {
   font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+.shared-item .views-breakdown {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-left: 0.25rem;
 }
 
 /* Collaborator form */

@@ -7,6 +7,57 @@ let parents = [];
 let parentIndex = 0;
 let childIndex = 0;
 let currentUserId = null;
+let isGuest = false;
+
+function applyGuestUI() {
+  const nextUrl = encodeURIComponent(window.location.pathname + window.location.search);
+
+  // Navbar: hide app links, show login/register
+  const navDashboard = document.getElementById("nav-dashboard");
+  const navAdd = document.getElementById("nav-add");
+  const navAnalytics = document.getElementById("nav-analytics");
+  const navProfile = document.getElementById("nav-profile");
+  const logoutBtn = document.getElementById("logout-btn");
+  const navLogin = document.getElementById("nav-login");
+  const navRegister = document.getElementById("nav-register");
+
+  if (navDashboard) navDashboard.style.display = "none";
+  if (navAdd) navAdd.style.display = "none";
+  if (navAnalytics) navAnalytics.style.display = "none";
+  if (navProfile) navProfile.style.display = "none";
+  if (logoutBtn) logoutBtn.style.display = "none";
+  if (navLogin) { navLogin.style.display = ""; navLogin.href = `/login.html?next=${nextUrl}`; }
+  if (navRegister) { navRegister.style.display = ""; navRegister.href = `/register.html?next=${nextUrl}`; }
+
+  // Guest CTA banner
+  const guestCta = document.getElementById("guest-cta");
+  const ctaLogin = document.getElementById("cta-login");
+  const ctaRegister = document.getElementById("cta-register");
+  if (guestCta) guestCta.style.display = "block";
+  if (ctaLogin) ctaLogin.href = `/login.html?next=${nextUrl}`;
+  if (ctaRegister) ctaRegister.href = `/register.html?next=${nextUrl}`;
+
+  // Hide share/action bar for guests
+  const actionBar = document.querySelector(".action-bar");
+  if (actionBar) actionBar.style.display = "none";
+}
+
+function showGuestToast(message) {
+  const existing = document.querySelector(".guest-toast");
+  if (existing) existing.remove();
+
+  const toast = document.createElement("div");
+  toast.className = "guest-toast";
+  const nextUrl = encodeURIComponent(window.location.pathname + window.location.search);
+  toast.innerHTML = `${message} <a href="/login.html?next=${nextUrl}">Log in</a> or <a href="/register.html?next=${nextUrl}">Register</a>`;
+  document.body.appendChild(toast);
+
+  setTimeout(() => toast.classList.add("show"), 10);
+  setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
 
 const PRESET_EMOJIS = [
   "\u2764\uFE0F", "\uD83D\uDD25", "\uD83D\uDE0D", "\uD83D\uDE4F", "\uD83C\uDF1F", "\uD83D\uDC4D",
@@ -28,11 +79,22 @@ async function loadCards() {
       return;
     }
 
-    const res = await fetch(`/api/parents/${parentId}`, { credentials: "include" });
-    if (res.status === 401) {
-      window.location.href = "/login.html?next=" + encodeURIComponent(window.location.pathname + window.location.search);
-      return;
+    let res;
+    let data;
+
+    if (isGuest) {
+      // Guest: use public endpoint directly
+      res = await fetch(`/api/parents/${parentId}/public`, { credentials: "include" });
+    } else {
+      res = await fetch(`/api/parents/${parentId}`, { credentials: "include" });
+      if (res.status === 401) {
+        // Not logged in — try public endpoint as guest
+        isGuest = true;
+        applyGuestUI();
+        res = await fetch(`/api/parents/${parentId}/public`, { credentials: "include" });
+      }
     }
+
     if (res.status === 403) {
       container.style.display = "none";
       document.querySelector(".card-stage").style.display = "none";
@@ -42,12 +104,19 @@ async function loadCards() {
       if (ownerBanner) ownerBanner.style.display = "none";
       const engagementSection = document.getElementById("engagement-section");
       if (engagementSection) engagementSection.style.display = "none";
+      const guestCta = document.getElementById("guest-cta");
+      if (guestCta) guestCta.style.display = "none";
       document.getElementById("unauthorized-state").style.display = "flex";
       return;
     }
     if (!res.ok) throw new Error("Failed to load data");
 
-    const data = await res.json();
+    data = await res.json();
+
+    if (data.is_guest) {
+      isGuest = true;
+      applyGuestUI();
+    }
 
     if (data.is_owner) {
       const listRes = await fetch("/api/parents/", { credentials: "include" });
@@ -144,8 +213,14 @@ function updatePageMeta() {
     if (meRes.ok) {
       const me = await meRes.json();
       currentUserId = me.id;
+    } else {
+      isGuest = true;
+      applyGuestUI();
     }
-  } catch {}
+  } catch {
+    isGuest = true;
+    applyGuestUI();
+  }
   loadCards();
 })();
 
@@ -334,11 +409,17 @@ function attachEvents() {
   });
 
   /* Audio */
-  if (audioBtn && audio) {
+  if (audioBtn) {
     audioBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      audio.currentTime = 0;
-      audio.play();
+      if (isGuest) {
+        showGuestToast("Register to play audio.");
+        return;
+      }
+      if (audio) {
+        audio.currentTime = 0;
+        audio.play();
+      }
     });
   }
 
@@ -346,6 +427,10 @@ function attachEvents() {
   if (dlBtn) {
     dlBtn.addEventListener("click", (e) => {
       e.stopPropagation();
+      if (isGuest) {
+        showGuestToast("Register to download cards.");
+        return;
+      }
       downloadCardGif();
     });
   }
@@ -545,13 +630,17 @@ let commentRefreshInterval = null;
 
 async function loadEngagement(parentId) {
   const section = document.getElementById("engagement-section");
-  if (!section || !currentUserId) return;
+  if (!section) return;
 
   section.style.display = "block";
 
+  const apiBase = isGuest
+    ? `/api/parents/${parentId}/public`
+    : `/api/parents/${parentId}`;
+
   const [reactionsRes, commentsRes] = await Promise.all([
-    fetch(`/api/parents/${parentId}/reactions`, { credentials: "include" }),
-    fetch(`/api/parents/${parentId}/comments`, { credentials: "include" }),
+    fetch(`${apiBase}/reactions`, { credentials: "include" }),
+    fetch(`${apiBase}/comments`, { credentials: "include" }),
   ]);
 
   const reactions = reactionsRes.ok ? await reactionsRes.json() : [];
@@ -569,7 +658,10 @@ async function loadEngagement(parentId) {
 
 async function refreshComments(parentId) {
   try {
-    const res = await fetch(`/api/parents/${parentId}/comments`, { credentials: "include" });
+    const endpoint = isGuest
+      ? `/api/parents/${parentId}/public/comments`
+      : `/api/parents/${parentId}/comments`;
+    const res = await fetch(endpoint, { credentials: "include" });
     if (!res.ok) return;
     const comments = await res.json();
 
@@ -649,6 +741,10 @@ function renderReactions(parentId, reactions) {
 
     // Left click: add +1 (up to 10 per user)
     btn.addEventListener("click", async () => {
+      if (isGuest) {
+        showGuestToast("Register to react.");
+        return;
+      }
       if (userCounts[emoji] >= 10) {
         btn.classList.remove("shake");
         void btn.offsetWidth;
@@ -673,6 +769,10 @@ function renderReactions(parentId, reactions) {
     // Right click: remove one
     btn.addEventListener("contextmenu", async (e) => {
       e.preventDefault();
+      if (isGuest) {
+        showGuestToast("Register to react.");
+        return;
+      }
       if (userCounts[emoji] <= 0) return;
 
       await fetch(`/api/parents/${parentId}/reactions`, {
@@ -768,6 +868,10 @@ function attachCommentForm(parentId) {
 
   newForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (isGuest) {
+      showGuestToast("Register to comment.");
+      return;
+    }
     const textarea = newForm.querySelector("#comment-text");
     const text = textarea.value.trim();
     if (!text) return;
