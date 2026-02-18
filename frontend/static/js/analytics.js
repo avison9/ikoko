@@ -55,6 +55,7 @@
           <div class="shared-item">
             <span class="label">${escapeHtml(sp.label)}</span>
             <span class="views">${sp.view_count} view${sp.view_count !== 1 ? "s" : ""}</span>
+            <span class="views-breakdown">(${sp.user_view_count} user${sp.user_view_count !== 1 ? "s" : ""}, ${sp.guest_view_count} guest${sp.guest_view_count !== 1 ? "s" : ""})</span>
           </div>`
         )
         .join("");

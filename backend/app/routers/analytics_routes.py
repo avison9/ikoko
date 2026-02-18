@@ -25,12 +25,13 @@ async def get_summary(
     )
     total_names = names_result.scalar() or 0
 
-    # Shared parents with view counts
+    # Shared parents with view counts (total, user, guest)
     shared_result = await db.execute(
         select(
             Parent.id,
             Parent.label,
             func.count(ParentView.id).label("view_count"),
+            func.count(ParentView.user_id).label("user_view_count"),
         )
         .outerjoin(ParentView, ParentView.parent_id == Parent.id)
         .where(Parent.user_id == user.id)
@@ -40,7 +41,13 @@ async def get_summary(
     shared_rows = shared_result.all()
 
     shared_parents = [
-        SharedParentSummary(parent_id=row[0], label=row[1], view_count=row[2])
+        SharedParentSummary(
+            parent_id=row[0],
+            label=row[1],
+            view_count=row[2],
+            user_view_count=row[3],
+            guest_view_count=row[2] - row[3],
+        )
         for row in shared_rows
     ]
 
