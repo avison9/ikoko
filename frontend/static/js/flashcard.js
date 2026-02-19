@@ -452,6 +452,7 @@ function attachEvents() {
       parentIndex = (parentIndex - 1 + parents.length) % parents.length;
       renderParent();
       updatePageMeta();
+      loadEngagement(getCurrentParent().id);
     });
   }
 
@@ -461,6 +462,7 @@ function attachEvents() {
       parentIndex = (parentIndex + 1) % parents.length;
       renderParent();
       updatePageMeta();
+      loadEngagement(getCurrentParent().id);
     });
   }
 
