@@ -226,9 +226,10 @@ function updatePageMeta() {
   loadCards();
 })();
 
-// Close emoji pickers on outside click/tap
-document.addEventListener("click", () => {
+// Close emoji pickers and reaction tooltips on outside click/tap
+document.addEventListener("click", (e) => {
   document.querySelectorAll(".comment-react-trigger.open").forEach((t) => t.classList.remove("open"));
+  if (!e.target.closest(".comment-reaction-btn")) hideReactionUserTooltip();
 });
 
 /* =========================
@@ -638,6 +639,7 @@ function formatDate(iso) {
 let commentRefreshInterval = null;
 
 async function loadEngagement(parentId) {
+  hideReactionUserTooltip();
   const section = document.getElementById("engagement-section");
   if (!section) return;
 
@@ -804,6 +806,11 @@ let commentsParentId = null;
 // Cache: { [commentId]: [ {id, user_id, username, comment_id, emoji}, ... ] }
 let commentReactionsCache = {};
 
+// Reaction user tooltip state
+let _reactionTooltipEl = null;
+let _mobileTooltipKey = null;
+let _mobileTooltipTimer = null;
+
 function renderComments(parentId, comments) {
   const list = document.getElementById("comments-list");
   if (!list) return;
@@ -894,13 +901,16 @@ function renderCommentReactions(commentId) {
   const reactions = commentReactionsCache[commentId] || [];
   const parentId = commentsParentId;
 
-  // Build counts
+  // Build counts, user flags, and per-emoji user lists
   const counts = {};
   const userReacted = {};
-  COMMENT_REACTION_EMOJIS.forEach((e) => { counts[e] = 0; userReacted[e] = false; });
+  const usersPerEmoji = {};
+  COMMENT_REACTION_EMOJIS.forEach((e) => { counts[e] = 0; userReacted[e] = false; usersPerEmoji[e] = []; });
   reactions.forEach((r) => {
     counts[r.emoji] = (counts[r.emoji] || 0) + 1;
     if (r.user_id === currentUserId) userReacted[r.emoji] = true;
+    if (!usersPerEmoji[r.emoji]) usersPerEmoji[r.emoji] = [];
+    usersPerEmoji[r.emoji].push(r.username);
   });
 
   // Only show emojis that have at least one reaction
@@ -923,27 +933,56 @@ function renderCommentReactions(commentId) {
 
   container.innerHTML = html;
 
-  if (isGuest) return;
+  const isTouchDevice = window.matchMedia("(hover: none)").matches;
 
-  // Click handlers for existing reaction pills (toggle off)
+  // Attach tooltip + toggle handlers to each reaction pill
   container.querySelectorAll(".comment-reaction-btn").forEach((btn) => {
+    const emoji = btn.dataset.emoji;
+    const users = usersPerEmoji[emoji] || [];
+    const MAX_NAMES = 5;
+    const tooltipText = users.length <= MAX_NAMES
+      ? users.join(", ")
+      : users.slice(0, MAX_NAMES).join(", ") + ` +${users.length - MAX_NAMES} more`;
+    const tooltipKey = `${commentId}:${emoji}`;
+
+    // Desktop: hover shows who reacted
+    if (!isTouchDevice) {
+      btn.addEventListener("mouseenter", () => showReactionUserTooltip(btn, tooltipText));
+      btn.addEventListener("mouseleave", hideReactionUserTooltip);
+    }
+
+    if (isGuest) return;
+
     btn.addEventListener("click", async () => {
+      if (isTouchDevice) {
+        if (_mobileTooltipKey !== tooltipKey) {
+          // First tap: show user list, don't toggle yet
+          hideReactionUserTooltip();
+          _mobileTooltipKey = tooltipKey;
+          showReactionUserTooltip(btn, tooltipText);
+          _mobileTooltipTimer = setTimeout(hideReactionUserTooltip, 2500);
+          return;
+        }
+        // Second tap (tooltip already visible): close tooltip and toggle
+        hideReactionUserTooltip();
+      }
+
       btn.disabled = true;
       try {
         const res = await fetch(`/api/parents/${parentId}/comments/${commentId}/reactions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ emoji: btn.dataset.emoji }),
+          body: JSON.stringify({ emoji }),
         });
-        if (res.ok) {
-          await loadCommentReactions(commentId);
-        }
+        if (res.ok) await loadCommentReactions(commentId);
       } finally {
         btn.disabled = false;
       }
     });
   });
+
+  if (isGuest) return;
 
   // Trigger click to toggle picker (works on mobile + desktop fallback)
   const trigger = container.querySelector(".comment-react-trigger");
@@ -969,9 +1008,7 @@ function renderCommentReactions(commentId) {
           credentials: "include",
           body: JSON.stringify({ emoji: btn.dataset.emoji }),
         });
-        if (res.ok) {
-          await loadCommentReactions(commentId);
-        }
+        if (res.ok) await loadCommentReactions(commentId);
       } finally {
         btn.disabled = false;
       }
@@ -981,6 +1018,47 @@ function renderCommentReactions(commentId) {
 
 function closeAllReactPickers() {
   document.querySelectorAll(".comment-react-trigger.open").forEach((t) => t.classList.remove("open"));
+}
+
+function getOrCreateReactionTooltip() {
+  if (!_reactionTooltipEl) {
+    _reactionTooltipEl = document.createElement("div");
+    _reactionTooltipEl.className = "reaction-user-tooltip";
+    document.body.appendChild(_reactionTooltipEl);
+  }
+  return _reactionTooltipEl;
+}
+
+function showReactionUserTooltip(anchorEl, text) {
+  const tip = getOrCreateReactionTooltip();
+  tip.textContent = text;
+  tip.classList.add("visible");
+
+  // Measure then position (fixed, so viewport-relative)
+  tip.style.left = "0px";
+  tip.style.top = "-9999px";
+  const tipW = tip.offsetWidth;
+  const tipH = tip.offsetHeight;
+  const rect = anchorEl.getBoundingClientRect();
+
+  let left = rect.left + rect.width / 2 - tipW / 2;
+  let top = rect.top - tipH - 6;
+
+  const margin = 8;
+  left = Math.max(margin, Math.min(left, window.innerWidth - tipW - margin));
+  if (top < margin) top = rect.bottom + 6; // flip below if not enough space above
+
+  tip.style.left = left + "px";
+  tip.style.top = top + "px";
+}
+
+function hideReactionUserTooltip() {
+  if (_reactionTooltipEl) _reactionTooltipEl.classList.remove("visible");
+  _mobileTooltipKey = null;
+  if (_mobileTooltipTimer) {
+    clearTimeout(_mobileTooltipTimer);
+    _mobileTooltipTimer = null;
+  }
 }
 
 function attachCommentForm(parentId) {
