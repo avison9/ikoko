@@ -239,9 +239,11 @@
     window.location.href = "/login.html";
   });
 
-  // ── Auto-refresh comments every 30s ─────────
+  // ── Auto-refresh comments + shared decks every 30s ─────────
   async function refreshFeedComments() {
     try {
+      await loadSummary();
+
       const res = await fetch("/api/analytics/comments", { credentials: "include" });
       if (!res.ok) return;
       const data = await res.json();
